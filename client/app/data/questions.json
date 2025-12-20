@@ -1,0 +1,98 @@
+[
+  {
+    "id": 1,
+    "headerTitle": "Why Fitness App (1/8)",
+    "question": "Why do you want to use a fitness app?",
+    "options": [
+      { "option": "I'm a beginner and one guidance", "description": "" },
+      { "option": "I am interested in improving my current training routine", "description": "" },
+      { "option": "I am bored of my workout plan and want more variation", "description": "" },
+      { "option": "I want an optimal training plan based on my specific needs", "description": "" },
+      { "option": "I want to know what to do at the gym every time without having to think about it", "description": "" }
+    ]
+  },
+  {
+    "id": 2,
+    "headerTitle": "Experience Level (2/8)",
+    "question": "How experienced are you lifting weights?",
+    "options": [
+      { "option": "No experience", "description": "new to the gym, not familiar with exercises and equipment. Focus on building training foundation" },
+      { "option": "Beginner", "description": "some gym experience less than one year, familiar with basic exercises but still learning proper form" },
+      { "option": "Intermediate", "description": "1 to 2 years of weightlifting experience, good understanding of exercises and form, ready for advanced methods" },
+      { "option": "Advanced", "description": "more than three years of consistent experience, significant strength/muscle development, comfortable with complex exercises" }
+    ]
+  },
+  {
+    "id": 3,
+    "headerTitle": "One Rep Max (3/8)",
+    "question": "Do you know your one rep max?",
+    "inputFields": [
+      { "label": "Bench press", "type": "number", "placeholder": "Enter your 1RM" },
+      { "label": "Back squat", "type": "number", "placeholder": "Enter your 1RM" },
+      { "label": "Deadlift", "type": "number", "placeholder": "Enter your 1RM" }
+    ]
+  },
+  {
+    "id": 4,
+    "headerTitle": "Fitness Goals (4/8)",
+    "question": "What are your top fitness goals?",
+    "options": [
+      { "option": "Build muscle and get toned", "description": "focus on muscle development and tone your body. Perform pyramid sets to improve your weights in every workout" },
+      { "option": "Enhance general fitness", "description": "improve your overall fitness by lifting consistent weights and learning new exercises" },
+      { "option": "Improve conditioning", "description": "focus on higher reps and lower weights through fast-paced supersets to boost overall conditioning" },
+      { "option": "Get stronger", "description": "focus on compound exercises, train for muscle per workout and lift heavier weights with lower rep ranges" }
+    ]
+  },
+  {
+    "id": 5,
+    "headerTitle": "Training Frequency (5/8)",
+    "question": "How often do you train?",
+    "options": [
+      { "option": "One day per week", "description": "" },
+      { "option": "Two days per week", "description": "" },
+      { "option": "Three days per week", "description": "" },
+      { "option": "Four days per week", "description": "" },
+      { "option": "Five days per week", "description": "" },
+      { "option": "Six days per week", "description": "" },
+      { "option": "Every day", "description": "" }
+    ]
+  },
+  {
+    "id": 6,
+    "headerTitle": "Workout Split (6/8)",
+    "question": "What's your preferred workout split?",
+    "options": [
+      { "option": "AI – optimized", "description": "our AI creates dynamic workouts, prioritizing the muscle groups with the best recovery state" },
+      { "option": "Custom", "description": "create your own routine" },
+      { "option": "Upper, lower", "description": "balanced training with double frequency between upper and lower body" },
+      { "option": "Push, pull, legs, full body", "description": "blend push, pull, and leg routines with full body sessions to maintain variety and optimize weekly volume" },
+      { "option": "Push, pull, legs", "description": "structure allows focus on one movement pattern per day, maximizing stimulus, ideal for hypertrophy" },
+      { "option": "Push, pull, legs, upper, lower", "description": "adaptation with additional days split between upper and lower body, increasing frequency and volume" },
+      { "option": "Upper, lower, full body", "description": "balance training with double frequency for both upper and lower body, rest day between full body sessions" },
+      { "option": "Full body", "description": "ideal for beginners or limited time, improves strength and endurance without multiple days per week" },
+      { "option": "Bro split", "description": "classic approach, dedicate each session to a single muscle group" },
+      { "option": "Lower focused + upper", "description": "focus on legs/glutes twice per week with at least one rest day between sessions" },
+      { "option": "Push, pull, legs, upper body", "description": "emphasizes upper body development, train push and pull muscles twice per week with rest days" }
+    ]
+  },
+  {
+    "id": 7,
+    "headerTitle": "Exercise Selection (7/8)",
+    "question": "How would you like us to select your exercises?",
+    "options": [
+      { "option": "Consistent", "description": "prioritize a few essential exercises repeated throughout workouts for easier progress tracking" },
+      { "option": "Balanced", "description": "mix of repeated and new exercises for a well-rounded experience with moderate progress tracking" },
+      { "option": "Varied", "description": "a lot of variety with different exercises in every workout, making progress tracking more challenging" }
+    ]
+  },
+  {
+    "id": 8,
+    "headerTitle": "Workout Location (8/8)",
+    "question": "Where do you exercise?",
+    "options": [
+      { "option": "Large gym", "description": "full fitness clubs such as Anytime Fitness, Planet Fitness, etc." },
+      { "option": "Small gym", "description": "compact gym with limited equipment" },
+      { "option": "Garage gym", "description": "barbells, squat rack, dumbbells, and more" }
+    ]
+  }
+]
