@@ -3,13 +3,12 @@ import { useLayoutEffect, useState } from "react";
 import { Button, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import questions from "../data/questions.json";
 
-
 export default function QuestionnaireScreen() {
 
     const [currentId, setCurrentId] = useState(0);
-    const [answers, setAnswers] = useState<any>({})
+    const [answers, setAnswers] = useState<any>({});
     const navigation = useNavigation();
-    const currentQuestion = questions[currentId]
+    const currentQuestion = questions[currentId];
 
     useLayoutEffect(() => {
         navigation.setOptions({ title: currentQuestion.headerTitle });
@@ -44,13 +43,12 @@ export default function QuestionnaireScreen() {
                  >
                     <Text className="text-1xl text-center text-black font-bold mr-4">Skip</Text>
                 </Pressable>
-            </View> 
+            </View>
           <Text >{currentQuestion.question}</Text>
               {currentQuestion.options &&
             currentQuestion.options.map((opt: any, idx: number) => (
               <View key={idx} className="grid grid-cols-1 justify-between items-center rounded-full h-15 w-[90%] bg-slate-500 px-3 py-2">
                 <Pressable
-                  
                   onPress={() => handleOptionSelect(opt.option)}
                 >
                   <Text className="text-black font-medium">{opt.option}</Text>
@@ -73,7 +71,6 @@ export default function QuestionnaireScreen() {
                 />
               </View>
             ))}
-    
           {currentQuestion.inputFields && (
             <Button title="Next" onPress={goToNext} />
           )}
