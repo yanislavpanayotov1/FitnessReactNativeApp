@@ -25,14 +25,25 @@ export default function QuestionnaireScreen() {
         });
       };
 
-      const goToNext = () => {
+      const goToNext = async () => {
         if (currentId < questions.length - 1) {
           setCurrentId(currentId + 1);
         } else {
-          console.log("Questionnaire complete:", answers);
-        }
-      };  
+          try {
+            const response = await fetch('http://127.0.0.1:3001/questions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ answers }), // answers array from state
+            });
+            const data = await response.json();
+            console.log(data);
 
+          } 
+          catch (error) {
+            console.error('Error submitting answers:', error);
+          }  
+        }
+      }
       return (
         <ScrollView>
            <View className="flex-1 flex-row justify-between items-center mt-2 mb-4 ">   
