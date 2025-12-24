@@ -1,8 +1,25 @@
 import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
+import { SessionContext } from "./context/SessionContext";
+import { useContext } from "react";
 
 export default function Index() {
   const router = useRouter()
+  const { setSessionId } = useContext(SessionContext);
+
+  const startOnboarding = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:3001/onboarding/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      console.log(data);
+      setSessionId(data.sessionId);
+    } catch (error) {
+      console.error('Error starting onboarding:', error);
+    }
+  };
 
   return (
     <View className="flex-1 h-screen w-screen">
@@ -29,7 +46,10 @@ export default function Index() {
       <View className="flex-1 items-center justify-end mb-10">
         <Pressable
           className="p-2 bg-lime-200 rounded-full w-1/2"
-          onPress={() => router.push({ pathname: "/questionnaire" })}
+          onPress={() => {
+            startOnboarding();
+            router.push({ pathname: "/questionnaire"})
+          }}
         >
           <Text className="text-black text-center font-bold text-xl">
             Get Started
