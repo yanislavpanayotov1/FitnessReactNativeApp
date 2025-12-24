@@ -97,6 +97,34 @@ app.get('/users/:id', (req, res) => {
     });
 })
 
+app.post('/ai_requests', (req, res) => {
+    const { sessionId } = req.body;
+    if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+    db.query(
+    'SELECT answer_value FROM user_answers WHERE session_id = ?',
+    [sessionId],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (results.length === 0) return res.status(404).json({ error: 'No answers found' });
+      
+      db.query(
+        'INSERT INTO ai_requests (session_id, sent_at) VALUES (?, ?)',
+        [sessionId, new Date()],
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Request saved', id: results.insertId });
+        }
+      );  
+    }
+  ); 
+}); 
+
+app.get('/ai_requests', (req, res) => {
+    db.query('SELECT * FROM ai_requests', (err, results) => {
+        if (err) return res.status(500).send(err.message);
+        res.send(results);
+    });
+})
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
