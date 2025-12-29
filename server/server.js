@@ -14,7 +14,29 @@ app.get('/test-db', (req, res) => {
     });
   });
 
+app.post('/questions', (req, res) => {
+    const { answers } = req.body;
+    if (!answers) return res.status(400).json({ error: 'No answers provided' });
 
+    const answersString = JSON.stringify(answers);
+
+    db.query(
+        'INSERT INTO user_answers (answer_value) VALUES (?)',
+        [answersString],
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Answers saved', id: results.insertId });
+        }
+    );
+});
+
+
+app.get('/questions', (req, res) => {
+    db.query('SELECT * FROM user_answers', (err, results) => {
+        if (err) return res.status(500).send(err.message);
+        res.send(results);
+    });
+})
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
