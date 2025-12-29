@@ -2,13 +2,17 @@ import { useNavigation } from "expo-router";
 import { useLayoutEffect, useState } from "react";
 import { Button, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import questions from "../data/questions.json";
+import { SessionContext } from "../context/SessionContext";
+import { useContext } from "react";
 
 export default function QuestionnaireScreen() {
 
     const [currentId, setCurrentId] = useState(0);
     const [answers, setAnswers] = useState<any>({});
     const navigation = useNavigation();
-    const currentQuestion = questions[currentId];
+    const currentQuestion = questions[currentId]; 
+
+    const { sessionId } = useContext(SessionContext);
 
     useLayoutEffect(() => {
         navigation.setOptions({ title: currentQuestion.headerTitle });
@@ -33,11 +37,10 @@ export default function QuestionnaireScreen() {
             const response = await fetch('http://127.0.0.1:3001/questions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ answers }), // answers array from state
+              body: JSON.stringify({ answers, sessionId }),
             });
             const data = await response.json();
             console.log(data);
-
           } 
           catch (error) {
             console.error('Error submitting answers:', error);

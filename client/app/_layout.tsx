@@ -1,9 +1,11 @@
 import "@/app/global.css"
 import { LinearGradient } from "expo-linear-gradient"
 import { Stack } from "expo-router"
+import { SessionProvider } from "./context/SessionContext"
 
 export default function RootLayout() {
   return (
+    <SessionProvider>
     <LinearGradient
       style={{ flex: 1 }}
       colors={[
@@ -16,5 +18,6 @@ export default function RootLayout() {
     >
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }} />
     </LinearGradient>
+    </SessionProvider>
   )
 }

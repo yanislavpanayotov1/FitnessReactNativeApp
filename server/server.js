@@ -14,21 +14,38 @@ app.get('/test-db', (req, res) => {
     });
   });
 
+app.post('/onboarding/session', (req, res) => {
+    db.query('INSERT INTO onboarding_sessions (started_at) VALUES (NOW())',
+    (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Session saved', sessionId: results.insertId });
+    })
+})
+
+app.get('/onboarding/session', (req, res) => {
+    db.query('SELECT * FROM onboarding_sessions', (err, results) => {
+        if (err) return res.status(500).send(err.message);
+        res.send(results);
+    });
+})
+
 app.post('/questions', (req, res) => {
-    const { answers } = req.body;
-    if (!answers) return res.status(400).json({ error: 'No answers provided' });
+    const { answers, sessionId } = req.body;
+    if (!answers || !sessionId) return res.status(400).json({ error: 'Missing answers or sessionId' });
 
     const answersString = JSON.stringify(answers);
 
     db.query(
-        'INSERT INTO user_answers (answer_value) VALUES (?)',
-        [answersString],
+        'INSERT INTO user_answers (answer_value, session_id) VALUES (?, ?)',
+        [answersString, sessionId],
         (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Answers saved', id: results.insertId });
         }
     );
 });
+
+
 
 
 app.get('/questions', (req, res) => {
