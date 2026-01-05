@@ -126,6 +126,59 @@ app.get('/ai_requests', (req, res) => {
     });
 })
 
+app.get('/ai_requests/:id', (req, res) => {
+    db.query('SELECT * FROM ai_requests WHERE id = ?', [req.params.id], (err, results) => {
+        if (err) return res.status(500).send(err.message);
+        res.send(results);
+    });
+})
+
+app.get('/workout-plans/:user_id', (req, res) => {
+    db.query('SELECT * FROM workout_plans WHERE user_id = ? ', [req.params.user_id], (err, results) => {
+        if (err) return res.status(500).send(err.message);
+        res.send(results);
+    });
+})
+
+app.post('/workout-plans', (req, res) => {
+    const { user_id, ai_request_id, plan_name, } = req.body;
+    if (!user_id || !plan_name || !ai_request_id) return res.status(400).json({ error: 'Missing user_id or plan_name or ai_request_id' });
+    db.query(
+        'INSERT INTO workout_plans (user_id,ai_request_id, plan_name, created_at) VALUES (?, ?, ?, ?)',
+        [user_id,ai_request_id, plan_name, new Date()],
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Plan saved', id: results.insertId });
+        }
+    );
+});
+
+app.patch('/workout-plans/:plan_id', (req, res) => {
+    const { plan_id } = req.params;
+    const { plan_name } = req.body;
+    if (!plan_name) return res.status(400).json({ error: 'Missing plan_name' });
+    db.query(
+        'UPDATE workout_plans SET plan_name = ? WHERE plan_id = ?',
+        [plan_name, plan_id],
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Plan updated', plan_id });
+        }
+    );
+});
+
+app.delete('/workout-plans/:plan_id', (req, res) => {
+    const { plan_id } = req.params;
+    db.query(
+        'DELETE FROM workout_plans WHERE plan_id = ?',
+        [plan_id],
+        (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Plan deleted', plan_id });
+        }
+    );
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
