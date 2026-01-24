@@ -1,11 +1,14 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import { View } from 'react-native'
+import React, { useContext } from 'react'
 import QuestionnaireScreen from './components/QuestionCard'
+import { ThemeContext } from './context/ThemeContext'
 
 const questionnaire = () => {
+  const { isDark } = useContext(ThemeContext)
+
   return (
-    <View className='flex-1 justify-start items-center mt-[60px]'>
-      <QuestionnaireScreen/>
+    <View className={isDark ? 'flex-1 bg-[#162926]' : 'flex-1 bg-[#F0F4F8]'}>
+      <QuestionnaireScreen />
     </View>
   )
 }
