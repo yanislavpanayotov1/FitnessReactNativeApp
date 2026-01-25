@@ -6,7 +6,7 @@ export const getApiUrl = () => {
         return 'http://127.0.0.1:3001';
     }
     // Replace this with your actual Render URL after deployment
-    return 'https://fitnessapp2-server.onrender.com';
+    return 'https://fitnessreactnativeapp.onrender.com';
 };
 
 export const API_URL = getApiUrl();

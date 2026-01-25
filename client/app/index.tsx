@@ -4,6 +4,7 @@ import { SessionContext } from "./context/SessionContext";
 import { UserContext } from "./context/UserContext";
 import { ThemeContext } from "./context/ThemeContext";
 import { useContext, useEffect, useRef } from "react";
+import { API_URL } from "./utils/apiConfig";
 
 
 export default function Index() {
@@ -27,7 +28,7 @@ export default function Index() {
     }
   }, [userId, hasPaid, hasCompletedOnboarding, segments]);
 
-  const API_URL = 'http://127.0.0.1:3001';
+
 
   const startOnboarding = async () => {
     try {

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { ThemeContext } from './context/ThemeContext'
 import { UserContext } from './context/UserContext'
 import { SessionContext } from './context/SessionContext'
+import { API_URL } from './utils/apiConfig'
 
 
 const registerScreen = () => {
@@ -32,7 +33,7 @@ const registerScreen = () => {
         setLoading(true);
         try {
             // First register the user
-            const response = await fetch('http://127.0.0.1:3001/users/register', {
+            const response = await fetch(`${API_URL}/users/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -50,7 +51,7 @@ const registerScreen = () => {
                 setUserId(data.user_id);
 
                 // Start a session for the questionnaire
-                const sessionRes = await fetch('http://127.0.0.1:3001/onboarding/session', {
+                const sessionRes = await fetch(`${API_URL}/onboarding/session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: data.user_id })

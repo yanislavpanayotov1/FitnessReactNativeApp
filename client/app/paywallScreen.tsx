@@ -8,6 +8,7 @@ import { GradientOverlay } from './components/GradientOverlay'
 import { useStripe } from '@stripe/stripe-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL } from './utils/apiConfig';
 
 
 const paywallScreen = () => {
@@ -51,7 +52,7 @@ const paywallScreen = () => {
     setIsLoading(true);
     try {
       // 1. Create Payment Intent on backend
-      const response = await fetch('http://127.0.0.1:3001/payments/intent', {
+      const response = await fetch(`${API_URL}/payments/intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,7 +94,7 @@ const paywallScreen = () => {
 
         // Mark as paid on server
         try {
-          await fetch('http://127.0.0.1:3001/users/mark-paid', {
+          await fetch(`${API_URL}/users/mark-paid`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId }),
@@ -108,7 +109,7 @@ const paywallScreen = () => {
         }
 
         try {
-          await fetch(`http://127.0.0.1:3001/dashboard/${userId}`);
+          await fetch(`${API_URL}/dashboard/${userId}`);
         } catch (genError) {
           console.error('Generation trigger failed (non-fatal):', genError);
         }
