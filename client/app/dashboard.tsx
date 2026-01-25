@@ -5,6 +5,7 @@ import { ThemeContext } from './context/ThemeContext'
 import { useRouter } from 'expo-router'
 import { clearAllStorage } from './utils/clearStorage'
 import { getExerciseImage } from './utils/exerciseImages'
+import { API_URL } from './utils/apiConfig'
 
 interface Exercise {
   name: string;
@@ -104,7 +105,7 @@ const dashboard = () => {
     if (!userId) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:3001/progress/${userId}`);
+      const response = await fetch(`${API_URL}/progress/${userId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -129,7 +130,7 @@ const dashboard = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/dashboard/${userId}?week=${week}`);
+      const response = await fetch(`${API_URL}/dashboard/${userId}?week=${week}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -175,7 +176,7 @@ const dashboard = () => {
     });
 
     try {
-      await fetch(`http://127.0.0.1:3001/progress/${userId}/exercise`, {
+      await fetch(`${API_URL}/progress/${userId}/exercise`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ exerciseId, isCompleted })
@@ -239,7 +240,7 @@ const dashboard = () => {
 
     setCompleting(true);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/progress/${userId}/complete-week`, {
+      const response = await fetch(`${API_URL}/progress/${userId}/complete-week`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ week: selectedWeek })
@@ -284,7 +285,7 @@ const dashboard = () => {
     }
 
     try {
-      const response = await fetch(`http://127.0.0.1:3001/progress/${userId}/new-cycle`, {
+      const response = await fetch(`${API_URL}/progress/${userId}/new-cycle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ oneRepMax: newOneRepMax })
@@ -760,8 +761,8 @@ const dashboard = () => {
                   <Text
                     style={{ fontFamily: 'Outfit_600SemiBold' }}
                     className={`text-xs ${currentWeekInfo.week === 4
-                        ? isDark ? 'text-orange-400' : 'text-orange-700'
-                        : isDark ? 'text-[#F2FD7D]' : 'text-white'
+                      ? isDark ? 'text-orange-400' : 'text-orange-700'
+                      : isDark ? 'text-[#F2FD7D]' : 'text-white'
                       }`}
                   >
                     {currentWeekInfo.week === 4 ? 'Deload Week' : `${currentWeekInfo.description} Phase`} • {currentWeekInfo.percentage}

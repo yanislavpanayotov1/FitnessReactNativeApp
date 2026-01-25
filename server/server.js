@@ -24,7 +24,7 @@ app.use(express.json())
 // --- ENDPOINTS ---
 
 app.get('/test-db', (req, res) => {
-    db.query('SELECT 1', (err) => {
+    db.query('SELECT 1', (err, result) => {
         if (err) return res.status(500).send(err.message);
         res.send('DB connected');
     });
@@ -33,18 +33,18 @@ app.get('/test-db', (req, res) => {
 app.post('/onboarding/session', (req, res) => {
     // Modified to optionally taking userId if session is started by auth user
     const { userId } = req.body;
-    db.query('INSERT INTO onboarding_sessions (started_at, user_id) VALUES (NOW(), ?)',
+    db.query('INSERT INTO onboarding_sessions (started_at, user_id) VALUES (NOW(), $1) RETURNING session_id',
         [userId || null],
-        (err, results) => {
+        (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: 'Session saved', sessionId: results.insertId });
+            res.json({ message: 'Session saved', sessionId: result.rows[0].session_id });
         })
 })
 
 app.get('/onboarding/session/:session_id', (req, res) => {
-    db.query('SELECT * FROM onboarding_sessions WHERE session_id = ?', [req.params.session_id], (err, results) => {
+    db.query('SELECT * FROM onboarding_sessions WHERE session_id = $1', [req.params.session_id], (err, result) => {
         if (err) return res.status(500).send(err.message);
-        res.send(results);
+        res.send(result.rows);
     });
 })
 
@@ -56,19 +56,19 @@ app.post('/questions', (req, res) => {
     const answersString = JSON.stringify(answers);
 
     db.query(
-        'INSERT INTO user_answers (answer_value, session_id) VALUES (?, ?)',
+        'INSERT INTO user_answers (answer_value, session_id) VALUES ($1, $2) RETURNING id',
         [answersString, session_id],
-        (err, results) => {
+        (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: 'Answers saved', id: results.insertId });
+            res.json({ message: 'Answers saved', id: result.rows[0].id });
         }
     );
 });
 
 app.get('/questions', (req, res) => {
-    db.query('SELECT * FROM user_answers', (err, results) => {
+    db.query('SELECT * FROM user_answers', (err, result) => {
         if (err) return res.status(500).send(err.message);
-        res.send(results);
+        res.send(result.rows);
     });
 })
 
@@ -90,8 +90,10 @@ app.post('/auth/google', async (req, res) => {
         const googleId = payload.sub; // Google User ID
 
         // Check if user exists
-        db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+        db.query('SELECT * FROM users WHERE email = $1', [email], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
+
+            const results = result.rows;
 
             if (results.length > 0) {
                 // Login existing
@@ -101,9 +103,10 @@ app.post('/auth/google', async (req, res) => {
 
                 // Check if user has completed onboarding
                 db.query(
-                    'SELECT 1 FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = ? LIMIT 1',
+                    'SELECT 1 FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = $1 LIMIT 1',
                     [finalUserId],
-                    (err, answerResults) => {
+                    (err, answerResult) => {
+                        const answerResults = answerResult ? answerResult.rows : [];
                         const has_completed_onboarding = answerResults && answerResults.length > 0;
                         res.json({
                             user_id: finalUserId,
@@ -117,12 +120,12 @@ app.post('/auth/google', async (req, res) => {
             } else {
                 // Create new user via Google
                 db.query(
-                    'INSERT INTO users (email, google_id, created_at) VALUES (?, ?, ?)',
+                    'INSERT INTO users (email, google_id, created_at) VALUES ($1, $2, $3) RETURNING user_id',
                     [email, googleId, new Date()],
                     (err, result) => {
                         if (err) return res.status(500).json({ error: err.message });
                         res.json({
-                            user_id: result.insertId,
+                            user_id: result.rows[0].user_id,
                             email: email,
                             isNew: true,
                             has_paid: false,
@@ -151,17 +154,18 @@ app.post('/auth/apple', async (req, res) => {
         return res.status(400).json({ error: 'Email required' });
     }
 
-    db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
+    db.query('SELECT * FROM users WHERE email = $1', [email], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
+        const results = result.rows;
         if (results.length > 0) {
             res.json({ user_id: results[0].user_id, email });
         } else {
             db.query(
-                'INSERT INTO users (email, created_at) VALUES (?, ?)',
+                'INSERT INTO users (email, created_at) VALUES ($1, $2) RETURNING user_id',
                 [email, new Date()],
                 (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
-                    res.json({ user_id: result.insertId, email, isNew: true });
+                    res.json({ user_id: result.rows[0].user_id, email, isNew: true });
                 }
             );
         }
@@ -177,23 +181,23 @@ app.post('/users/register', async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
 
     // Check if exists
-    db.query('SELECT user_id FROM users WHERE email = ?', [email], (err, results) => {
+    db.query('SELECT user_id FROM users WHERE email = $1', [email], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (results.length > 0) return res.status(400).json({ error: 'User already exists' });
+        if (result.rows.length > 0) return res.status(400).json({ error: 'User already exists' });
 
         const passwordHash = bcrypt.hashSync(password, 10);
 
         db.query(
-            'INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)',
+            'INSERT INTO users (email, password_hash, created_at) VALUES ($1, $2, $3) RETURNING user_id',
             [email, passwordHash, new Date()],
-            async (err, results) => {
+            async (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
 
-                const new_user_id = results.insertId;
+                const new_user_id = result.rows[0].user_id;
 
                 // If session_id provided, link it, otherwise it's fine
                 if (session_id) {
-                    db.query('UPDATE onboarding_sessions SET user_id = ? WHERE session_id = ?', [new_user_id, session_id]);
+                    db.query('UPDATE onboarding_sessions SET user_id = $1 WHERE session_id = $2', [new_user_id, session_id]);
                 }
 
                 res.json({
@@ -235,10 +239,11 @@ app.post('/users/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
     db.query(
-        'SELECT * FROM users WHERE email = ?',
+        'SELECT * FROM users WHERE email = $1',
         [email],
-        async (err, results) => {
+        async (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
+            const results = result.rows;
             if (results.length === 0) return res.status(401).json({ error: 'Invalid email or password' });
             const user = results[0];
             if (!user.password_hash || !bcrypt.compareSync(password, user.password_hash)) return res.status(401).json({ error: 'Invalid email or password' });
@@ -249,16 +254,18 @@ app.post('/users/login', async (req, res) => {
 
             // Check onboarding status
             db.query(
-                'SELECT 1 FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = ? LIMIT 1',
+                'SELECT 1 FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = $1 LIMIT 1',
                 [user_id],
-                (err, answerResults) => {
+                (err, answerResult) => {
+                    const answerResults = answerResult ? answerResult.rows : [];
                     const has_completed_onboarding = answerResults && answerResults.length > 0;
 
                     // Check for existing AI request
                     db.query(
-                        'SELECT ar.id FROM ai_requests ar JOIN onboarding_sessions os ON ar.session_id = os.session_id WHERE os.user_id = ? LIMIT 1',
+                        'SELECT ar.id FROM ai_requests ar JOIN onboarding_sessions os ON ar.session_id = os.session_id WHERE os.user_id = $1 LIMIT 1',
                         [user_id],
-                        (err, existingRequest) => {
+                        (err, existingRequestResult) => {
+                            const existingRequest = existingRequestResult ? existingRequestResult.rows : [];
                             const response = {
                                 message: 'User logged in',
                                 id: user_id,
@@ -293,13 +300,13 @@ app.post('/users/mark-paid', (req, res) => {
         return res.status(400).json({ error: 'Missing userId' });
     }
 
-    db.query('UPDATE users SET has_paid = 1 WHERE user_id = ?', [userId], (err, result) => {
+    db.query('UPDATE users SET has_paid = true WHERE user_id = $1', [userId], (err, result) => {
         if (err) {
             console.error('[mark-paid] DB Error:', err);
             return res.status(500).json({ error: err.message });
         }
         console.log(`[mark-paid] Update result:`, result);
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             console.warn(`[mark-paid] No rows updated for user ${userId}. Check if ID exists.`);
         } else {
             console.log(`[mark-paid] Successfully marked user ${userId} as paid.`);
@@ -311,9 +318,9 @@ app.post('/users/mark-paid', (req, res) => {
 
 
 app.get('/users/:id', (req, res) => {
-    db.query('SELECT * FROM users WHERE user_id = ?', [req.params.id], (err, results) => {
+    db.query('SELECT * FROM users WHERE user_id = $1', [req.params.id], (err, result) => {
         if (err) return res.status(500).send(err.message);
-        res.send(results);
+        res.send(result.rows);
     });
 })
 
@@ -323,18 +330,20 @@ app.post('/ai_requests', async (req, res) => {
 
     // First verify the user is registered
     db.query(
-        'SELECT user_id FROM users WHERE user_id = ?',
+        'SELECT user_id FROM users WHERE user_id = $1',
         [user_id],
-        async (err, userResults) => {
+        async (err, userResult) => {
             if (err) return res.status(500).json({ error: err.message });
+            const userResults = userResult.rows;
             if (userResults.length === 0) return res.status(401).json({ error: 'User not registered. Please register first.' });
 
             // Now get the answers for this registered user
             db.query(
-                'SELECT ua.answer_value, ua.session_id FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = ?',
+                'SELECT ua.answer_value, ua.session_id FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = $1',
                 [user_id],
-                async (err, results) => {
+                async (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
+                    const results = result.rows;
                     if (results.length === 0) return res.status(404).json({ error: 'No answers found for this user' });
 
                     const answers = results[0].answer_value;
@@ -359,13 +368,13 @@ app.post('/ai_requests', async (req, res) => {
                     }
 
                     db.query(
-                        'INSERT INTO ai_requests (session_id, sent_at) VALUES (?, ?)',
+                        'INSERT INTO ai_requests (session_id, sent_at) VALUES ($1, $2) RETURNING id',
                         [session_id, new Date()],
-                        (err, results) => {
+                        (err, result) => {
                             if (err) return res.status(500).json({ error: err.message });
                             res.json({
                                 message: 'Request saved',
-                                id: results.insertId,
+                                id: result.rows[0].id,
                                 workout_plan: plan
                             });
                         }
@@ -377,23 +386,23 @@ app.post('/ai_requests', async (req, res) => {
 });
 
 app.get('/ai_requests', (req, res) => {
-    db.query('SELECT * FROM ai_requests', (err, results) => {
+    db.query('SELECT * FROM ai_requests', (err, result) => {
         if (err) return res.status(500).send(err.message);
-        res.send(results);
+        res.send(result.rows);
     });
 })
 
 app.get('/ai_requests/:id', (req, res) => {
-    db.query('SELECT * FROM ai_requests WHERE id = ?', [req.params.id], (err, results) => {
+    db.query('SELECT * FROM ai_requests WHERE id = $1', [req.params.id], (err, result) => {
         if (err) return res.status(500).send(err.message);
-        res.send(results);
+        res.send(result.rows);
     });
 })
 
 app.get('/workout-plans/:user_id', (req, res) => {
-    db.query('SELECT * FROM workout_plans WHERE user_id = ? ', [req.params.user_id], (err, results) => {
+    db.query('SELECT * FROM workout_plans WHERE user_id = $1 ', [req.params.user_id], (err, result) => {
         if (err) return res.status(500).send(err.message);
-        res.send(results);
+        res.send(result.rows);
     });
 })
 
@@ -401,11 +410,11 @@ app.post('/workout-plans', (req, res) => {
     const { user_id, ai_request_id, plan_name, } = req.body;
     if (!user_id || !plan_name || !ai_request_id) return res.status(400).json({ error: 'Missing user_id or plan_name or ai_request_id' });
     db.query(
-        'INSERT INTO workout_plans (user_id,ai_request_id, plan_name, created_at) VALUES (?, ?, ?, ?)',
+        'INSERT INTO workout_plans (user_id,ai_request_id, plan_name, created_at) VALUES ($1, $2, $3, $4) RETURNING plan_id',
         [user_id, ai_request_id, plan_name, new Date()],
-        (err, results) => {
+        (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: 'Plan saved', id: results.insertId });
+            res.json({ message: 'Plan saved', id: result.rows[0].plan_id });
         }
     );
 });
@@ -415,9 +424,9 @@ app.patch('/workout-plans/:plan_id', (req, res) => {
     const { plan_name } = req.body;
     if (!plan_name) return res.status(400).json({ error: 'Missing plan_name' });
     db.query(
-        'UPDATE workout_plans SET plan_name = ? WHERE plan_id = ?',
+        'UPDATE workout_plans SET plan_name = $1 WHERE plan_id = $2',
         [plan_name, plan_id],
-        (err, results) => {
+        (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Plan updated', plan_id });
         }
@@ -427,9 +436,9 @@ app.patch('/workout-plans/:plan_id', (req, res) => {
 app.delete('/workout-plans/:plan_id', (req, res) => {
     const { plan_id } = req.params;
     db.query(
-        'DELETE FROM workout_plans WHERE plan_id = ?',
+        'DELETE FROM workout_plans WHERE plan_id = $1',
         [plan_id],
-        (err, results) => {
+        (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Plan deleted', plan_id });
         }
@@ -444,11 +453,11 @@ app.get('/dashboard/:user_id', async (req, res) => {
         // Get user's questionnaire answers
         const answers = await new Promise((resolve, reject) => {
             db.query(
-                'SELECT ua.answer_value FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = ?',
+                'SELECT ua.answer_value FROM user_answers ua JOIN onboarding_sessions os ON ua.session_id = os.session_id WHERE os.user_id = $1',
                 [user_id],
-                (err, results) => {
+                (err, result) => {
                     if (err) reject(err);
-                    else resolve(results);
+                    else resolve(result.rows);
                 }
             );
         });
@@ -467,11 +476,11 @@ app.get('/dashboard/:user_id', async (req, res) => {
             // Get AI-generated workout from workout_plans
             const aiWorkout = await new Promise((resolve, reject) => {
                 db.query(
-                    'SELECT wp.plan_name FROM workout_plans wp WHERE wp.user_id = ? AND wp.ai_request_id IS NOT NULL LIMIT 1',
+                    'SELECT wp.plan_name FROM workout_plans wp WHERE wp.user_id = $1 AND wp.ai_request_id IS NOT NULL LIMIT 1',
                     [user_id],
-                    (err, results) => {
+                    (err, result) => {
                         if (err) reject(err);
-                        else resolve(results);
+                        else resolve(result.rows);
                     }
                 );
             });
@@ -489,17 +498,17 @@ app.get('/dashboard/:user_id', async (req, res) => {
                     // Save it to database
                     await new Promise((resolve, reject) => {
                         db.query(
-                            'INSERT INTO ai_requests (session_id, sent_at) VALUES ((SELECT session_id FROM onboarding_sessions WHERE user_id = ? LIMIT 1), ?)',
+                            'INSERT INTO ai_requests (session_id, sent_at) VALUES ((SELECT session_id FROM onboarding_sessions WHERE user_id = $1 LIMIT 1), $2) RETURNING id',
                             [user_id, new Date()],
-                            (err, aiResults) => {
+                            (err, aiResult) => {
                                 if (err) {
                                     console.error('Error saving AI request:', err);
                                     reject(err);
                                 } else {
-                                    const ai_request_id = aiResults.insertId;
+                                    const ai_request_id = aiResult.rows[0].id;
 
                                     db.query(
-                                        'INSERT INTO workout_plans (user_id, ai_request_id, plan_name, created_at) VALUES (?, ?, ?, ?)',
+                                        'INSERT INTO workout_plans (user_id, ai_request_id, plan_name, created_at) VALUES ($1, $2, $3, $4)',
                                         [user_id, ai_request_id, JSON.stringify(workout_plan), new Date()],
                                         (err) => {
                                             if (err) console.error('Error saving workout plan:', err);
@@ -637,12 +646,12 @@ app.get('/progress/:user_id', async (req, res) => {
             db.query(
                 `SELECT cycle_number, completed_weeks, completed_exercises, current_week, updated_at 
                  FROM workout_progress 
-                 WHERE user_id = ? 
+                 WHERE user_id = $1 
                  ORDER BY cycle_number DESC LIMIT 1`,
                 [user_id],
-                (err, results) => {
+                (err, result) => {
                     if (err) reject(err);
-                    else resolve(results);
+                    else resolve(result.rows);
                 }
             );
         });
@@ -652,7 +661,7 @@ app.get('/progress/:user_id', async (req, res) => {
             await new Promise((resolve, reject) => {
                 db.query(
                     `INSERT INTO workout_progress (user_id, cycle_number, completed_weeks, completed_exercises, current_week, updated_at) 
-                     VALUES (?, 1, '[]', '{}', 1, NOW())`,
+                     VALUES ($1, 1, '[]', '{}', 1, NOW())`,
                     [user_id],
                     (err) => {
                         if (err) reject(err);
@@ -695,11 +704,11 @@ app.post('/progress/:user_id/exercise', async (req, res) => {
         const progress = await new Promise((resolve, reject) => {
             db.query(
                 `SELECT id, completed_exercises FROM workout_progress 
-                 WHERE user_id = ? ORDER BY cycle_number DESC LIMIT 1`,
+                 WHERE user_id = $1 ORDER BY cycle_number DESC LIMIT 1`,
                 [user_id],
-                (err, results) => {
+                (err, result) => {
                     if (err) reject(err);
-                    else resolve(results);
+                    else resolve(result.rows);
                 }
             );
         });
@@ -716,7 +725,7 @@ app.post('/progress/:user_id/exercise', async (req, res) => {
 
         await new Promise((resolve, reject) => {
             db.query(
-                `UPDATE workout_progress SET completed_exercises = ? WHERE id = ?`,
+                `UPDATE workout_progress SET completed_exercises = $1 WHERE id = $2`,
                 [JSON.stringify(currentExercises), progress[0].id],
                 (err) => {
                     if (err) reject(err);
@@ -747,12 +756,12 @@ app.post('/progress/:user_id/complete-week', async (req, res) => {
             db.query(
                 `SELECT id, cycle_number, completed_weeks, current_week 
                  FROM workout_progress 
-                 WHERE user_id = ? 
+                 WHERE user_id = $1 
                  ORDER BY cycle_number DESC LIMIT 1`,
                 [user_id],
-                (err, results) => {
+                (err, result) => {
                     if (err) reject(err);
-                    else resolve(results);
+                    else resolve(result.rows);
                 }
             );
         });
@@ -781,8 +790,8 @@ app.post('/progress/:user_id/complete-week', async (req, res) => {
             await new Promise((resolve, reject) => {
                 db.query(
                     `UPDATE workout_progress 
-                     SET completed_weeks = ?, current_week = ?, updated_at = NOW() 
-                     WHERE id = ?`,
+                     SET completed_weeks = $1, current_week = $2, updated_at = NOW() 
+                     WHERE id = $3`,
                     [JSON.stringify(completedWeeks), nextWeek, progressId],
                     (err) => {
                         if (err) reject(err);
@@ -795,7 +804,7 @@ app.post('/progress/:user_id/complete-week', async (req, res) => {
             await new Promise((resolve, reject) => {
                 db.query(
                     `INSERT INTO workout_progress (user_id, cycle_number, completed_weeks, current_week, updated_at) 
-                     VALUES (?, ?, ?, ?, NOW())`,
+                     VALUES ($1, $2, $3, $4, NOW())`,
                     [user_id, cycleNumber, JSON.stringify(completedWeeks), nextWeek],
                     (err) => {
                         if (err) reject(err);
@@ -836,12 +845,12 @@ app.post('/progress/:user_id/new-cycle', async (req, res) => {
         const progress = await new Promise((resolve, reject) => {
             db.query(
                 `SELECT cycle_number FROM workout_progress 
-                 WHERE user_id = ? 
+                 WHERE user_id = $1 
                  ORDER BY cycle_number DESC LIMIT 1`,
                 [user_id],
-                (err, results) => {
+                (err, result) => {
                     if (err) reject(err);
-                    else resolve(results);
+                    else resolve(result.rows);
                 }
             );
         });
@@ -852,7 +861,7 @@ app.post('/progress/:user_id/new-cycle', async (req, res) => {
         await new Promise((resolve, reject) => {
             db.query(
                 `INSERT INTO workout_progress (user_id, cycle_number, completed_weeks, current_week, updated_at) 
-                 VALUES (?, ?, '[]', 1, NOW())`,
+                 VALUES ($1, $2, '[]', 1, NOW())`,
                 [user_id, newCycleNumber],
                 (err) => {
                     if (err) reject(err);
@@ -867,12 +876,12 @@ app.post('/progress/:user_id/new-cycle', async (req, res) => {
                 `SELECT ua.id, ua.answer_value 
                  FROM user_answers ua 
                  JOIN onboarding_sessions os ON ua.session_id = os.session_id 
-                 WHERE os.user_id = ? 
+                 WHERE os.user_id = $1 
                  ORDER BY ua.id DESC LIMIT 1`,
                 [user_id],
-                (err, results) => {
+                (err, result) => {
                     if (err) reject(err);
-                    else resolve(results);
+                    else resolve(result.rows);
                 }
             );
         });
@@ -883,7 +892,7 @@ app.post('/progress/:user_id/new-cycle', async (req, res) => {
 
             await new Promise((resolve, reject) => {
                 db.query(
-                    `UPDATE user_answers SET answer_value = ? WHERE id = ?`,
+                    `UPDATE user_answers SET answer_value = $1 WHERE id = $2`,
                     [JSON.stringify(answerObj), answers[0].id],
                     (err) => {
                         if (err) reject(err);

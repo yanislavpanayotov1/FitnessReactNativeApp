@@ -5,6 +5,7 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { UserContext } from './context/UserContext'
 import { SessionContext } from './context/SessionContext'
 import { ThemeContext } from './context/ThemeContext'
+import { API_URL } from './utils/apiConfig'
 
 // Configure Google Sign-In
 GoogleSignin.configure({
@@ -31,7 +32,7 @@ const loginScreen = () => {
             const userInfo = await GoogleSignin.signIn();
 
             // Verify with backend
-            const res = await fetch('http://127.0.0.1:3001/auth/google', {
+            const res = await fetch(`${API_URL}/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ idToken: userInfo.data?.idToken }),
@@ -49,7 +50,7 @@ const loginScreen = () => {
             // Priority 1: Missing Onboarding Data
             if (!data.has_completed_onboarding) {
                 // Create onboarding session
-                const sessionRes = await fetch('http://127.0.0.1:3001/onboarding/session', {
+                const sessionRes = await fetch(`${API_URL}/onboarding/session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: data.user_id })
@@ -96,7 +97,7 @@ const loginScreen = () => {
         setError(null)
 
         try {
-            const response = await fetch('http://127.0.0.1:3001/users/login', {
+            const response = await fetch(`${API_URL}/users/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
